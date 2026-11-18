@@ -2,7 +2,7 @@
 
 **Curso:** IF0009 – Desarrollo de Software IV · UCR Sede del Atlántico, Recinto Paraíso
 **Laboratorio 17:** Auditoría Forense de Software, Detección OWASP Top 10 y Remediación Defensiva
-**Estudiante:** Nelson ___________________ · **Carné:** __________
+**Estudiante:** Nelson Otárola · **Carné: C4I187
 **Fecha de la auditoría:** 18 de noviembre de 2026
 **Objeto auditado:** `unsecure_web_app_lab` (commit base `ef19c14`) — Backend Spring Boot 3.3.4 / Java 21, Frontend Angular, H2 en memoria
 
