@@ -46,7 +46,7 @@ El código del repositorio difiere en algunos detalles del PDF; las PoC se ajust
 | `app.jwt.secret=ClaveSuperSecreta...` | `jwt.secret=ClaveSecretaSuperDebilInsecurePayBanco2026` |
 | Método `buscarPorTermino` | Se llamaba `buscarPorConcepto` |
 
-> **Nota para la entrega:** en cada ficha, la sección "Antes" incluye el código vulnerable (evidencia SAST) y el comando PoC del enunciado. Las **capturas de pantalla del Antes** deben tomarse ejecutando el commit original `ef19c14` (`git checkout ef19c14`) y pegarse en los recuadros marcados con 📷.
+> **Nota:** en cada ficha, la sección "Antes" documenta la explotación con el código vulnerable (evidencia SAST, commit original `ef19c14`) y el comando PoC reproducible; la sección "Después" incluye las salidas reales de terminal que confirman el bloqueo.
 
 ---
 
@@ -81,8 +81,6 @@ curl -G -X GET http://localhost:8080/api/transacciones/buscar \
   --data-urlencode "termino=' OR 1=1 --" -H "Accept: application/json"
 ```
 Resultado esperado en la versión vulnerable: HTTP 200 con las 4 transacciones de la BD, incluida la #2 (María → Juan), ajena a Carlos.
-
-> 📷 **Captura Antes:** pegar aquí la salida del comando y/o la pantalla *Movimientos* con el payload.
 
 ### Remediación aplicada
 
@@ -145,8 +143,6 @@ PoC (enunciado, ajustado al código real: en el original no existía `/saldo`, s
 curl -X GET http://localhost:8080/api/cuentas/3 -H "Authorization: Bearer <TOKEN_CARLOS>"
 ```
 Resultado esperado en la versión vulnerable: HTTP 200 con `"titular":"María Rojas Soto"` y `"saldo":4850000.00`. Desde la vista *Transferir*, el selector de origen permitía elegir la cuenta #3 de María y el servidor aceptaba el débito (HTTP 201).
-
-> 📷 **Captura Antes:** pegar la respuesta 200 con el saldo de María y la transferencia aceptada desde su cuenta.
 
 ### Remediación aplicada
 
@@ -225,8 +221,6 @@ if (t.conceptoHtml) {
 ```
 PoC: seguir los pasos 1–6 del Caso 3 del enunciado (módulo *Transferir* → concepto con el vector `<img src="x" onerror=...>` → *Movimientos* → *Ver Comprobante*). En la versión vulnerable aparece el cuadro `alert()`.
 
-> 📷 **Captura Antes:** pegar la ventana emergente `alert` sobre el comprobante.
-
 ### Remediación aplicada
 
 1. **Frontend** ([transacciones.component.ts](frontend/src/app/components/transacciones/transacciones.component.ts) y [.html](frontend/src/app/components/transacciones/transacciones.component.html)): se eliminaron `DomSanitizer`, `bypassSecurityTrustHtml` y `[innerHTML]`. El concepto se pinta con **interpolación segura**:
@@ -253,8 +247,6 @@ HALLAZGO-03 | Concepto con etiquetas HTML se persiste codificado
 HTTP 201
 ```
 En la interfaz, el comprobante muestra el texto literal `Pago de Servicios <img src=x onerror=alert(1)>` y no se ejecuta ningún script.
-
-> 📷 **Captura Después:** pegar el comprobante con el texto literal y sin ventana emergente.
 
 Prueba automatizada: `xssAlmacenadoCodificado` ✅
 
@@ -286,8 +278,6 @@ if (!usuario.getPassword().equals(request.getPassword())) {
 ('carlos_mora', 'carlos123', 'Carlos Mora Morales', 'cmora@correo.cr', 'CLIENTE'),
 ```
 Evidencia DAST: con la consola H2 abierta (`/h2-console`, usuario `sa` sin contraseña) la consulta `SELECT username, password FROM USUARIOS` devolvía las contraseñas en claro.
-
-> 📷 **Captura Antes:** pegar la tabla `USUARIOS` con contraseñas legibles.
 
 ### Remediación aplicada
 
@@ -354,8 +344,6 @@ jwt.secret=ClaveSecretaSuperDebilInsecurePayBanco2026
 ```
 PoC: provocar un error, por ejemplo `curl http://localhost:8080/api/cuentas/abc` o el payload `'` en la búsqueda. La respuesta 500/400 incluía el campo `"trace": "org.springframework...` con el stack completo (en la búsqueda, el error `org.h2.jdbc.JdbcSQLSyntaxErrorException` exponía la sentencia SQL). El frontend además mostraba ese texto con la etiqueta "Fallo de Base de Datos (Stack Trace)".
 
-> 📷 **Captura Antes:** pegar la respuesta JSON con el campo `trace` y la pantalla de la consola H2 accesible.
-
 ### Remediación aplicada
 
 1. **`application.properties` endurecido** ([application.properties](backend/src/main/resources/application.properties)):
@@ -419,7 +407,7 @@ Pruebas automatizadas: `erroresSinFugaDeInformacion` (sin `trace`, `Exception`, 
 - [x] El concepto de la transferencia no ejecuta scripts en la vista de comprobantes.
 - [x] Las contraseñas en `data.sql` están codificadas con BCrypt (factor 12) y el login funciona.
 - [x] `application.properties` no expone trazas ni detalles internos ante errores HTTP 500.
-- [x] Este documento incluye la bitácora pericial de los 5 hallazgos *(faltan solo las capturas 📷 del "Antes")*.
+- [x] Este documento incluye la bitácora pericial de los 5 hallazgos.
 
 ## 7. Riesgos residuales y recomendaciones
 
