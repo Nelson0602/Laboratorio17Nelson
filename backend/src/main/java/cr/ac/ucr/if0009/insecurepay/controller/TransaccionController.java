@@ -3,6 +3,7 @@ package cr.ac.ucr.if0009.insecurepay.controller;
 import cr.ac.ucr.if0009.insecurepay.dto.TransaccionDto;
 import cr.ac.ucr.if0009.insecurepay.dto.TransferenciaDto;
 import cr.ac.ucr.if0009.insecurepay.service.TransaccionService;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,33 +21,38 @@ public class TransaccionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TransaccionDto>> listarTodas() {
-        return ResponseEntity.ok(transaccionService.listarTodas());
+    public ResponseEntity<List<TransaccionDto>> listar(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+        return ResponseEntity.ok(transaccionService.listarVisibles(authHeader));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<TransaccionDto> obtenerPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(transaccionService.obtenerPorId(id));
+    public ResponseEntity<TransaccionDto> obtenerPorId(
+            @PathVariable Long id,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+        return ResponseEntity.ok(transaccionService.obtenerPorId(id, authHeader));
     }
 
     @GetMapping("/cuenta/{cuentaId}")
-    public ResponseEntity<List<TransaccionDto>> obtenerPorCuenta(@PathVariable Long cuentaId) {
-        return ResponseEntity.ok(transaccionService.obtenerPorCuenta(cuentaId));
+    public ResponseEntity<List<TransaccionDto>> obtenerPorCuenta(
+            @PathVariable Long cuentaId,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+        return ResponseEntity.ok(transaccionService.obtenerPorCuenta(cuentaId, authHeader));
     }
 
-    // [VULNERABILIDAD INTENCIONADA: A03:2021 - SQL Injection]
-    // Endpoint para buscar transacciones vulnerable a inyeccion SQL en el parametro 'termino'
+    // [REMEDIACION A03:2021 - SQL Injection] Busqueda mediante JPQL parametrizado.
     @GetMapping("/buscar")
-    public ResponseEntity<List<TransaccionDto>> buscarPorConcepto(@RequestParam("termino") String termino) {
-        return ResponseEntity.ok(transaccionService.buscarPorConcepto(termino));
+    public ResponseEntity<List<TransaccionDto>> buscar(
+            @RequestParam("termino") String termino,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+        return ResponseEntity.ok(transaccionService.buscarPorTermino(termino, authHeader));
     }
 
-    // [VULNERABILIDAD INTENCIONADA: A01:2021 - IDOR en Transferencias]
-    // [VULNERABILIDAD INTENCIONADA: A03:2021 - Stored XSS]
+    // [REMEDIACION A01:2021 - IDOR] y [REMEDIACION A03:2021 - Stored XSS]
     @PostMapping("/transferir")
-    public ResponseEntity<TransaccionDto> transferir(@RequestBody TransferenciaDto dto) {
-        TransaccionDto resultado = transaccionService.transferir(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(resultado);
+    public ResponseEntity<TransaccionDto> transferir(
+            @RequestBody TransferenciaDto dto,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(transaccionService.transferir(dto, authHeader));
     }
 }
-

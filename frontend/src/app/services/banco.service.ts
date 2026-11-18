@@ -15,7 +15,7 @@ export class BancoService {
     return this.http.get<Cuenta[]>(`${this.apiUrl}/cuentas/usuario/${usuarioId}`);
   }
 
-  // [VULNERABILIDAD INTENCIONADA: IDOR en Consulta de Cuentas]
+  // [REMEDIACION] El backend valida la propiedad de la cuenta (403 si es ajena)
   obtenerCuentaPorId(id: number): Observable<Cuenta> {
     return this.http.get<Cuenta>(`${this.apiUrl}/cuentas/${id}`);
   }
@@ -36,12 +36,12 @@ export class BancoService {
     return this.http.get<Transaccion[]>(`${this.apiUrl}/transacciones/cuenta/${cuentaId}`);
   }
 
-  // [VULNERABILIDAD INTENCIONADA: SQL Injection]
+  // [REMEDIACION] Busqueda atendida por JPQL parametrizado en el backend
   buscarTransacciones(termino: string): Observable<Transaccion[]> {
     return this.http.get<Transaccion[]>(`${this.apiUrl}/transacciones/buscar?termino=${encodeURIComponent(termino)}`);
   }
 
-  // [VULNERABILIDAD INTENCIONADA: IDOR en Origen de Fondos + Stored XSS]
+  // [REMEDIACION] Origen validado contra el JWT; concepto codificado como texto
   transferir(req: TransferenciaRequest): Observable<Transaccion> {
     return this.http.post<Transaccion>(`${this.apiUrl}/transacciones/transferir`, req);
   }

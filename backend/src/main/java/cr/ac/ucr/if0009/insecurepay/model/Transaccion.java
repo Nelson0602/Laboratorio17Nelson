@@ -23,10 +23,9 @@ public class Transaccion {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal monto;
 
-    // [VULNERABILIDAD INTENCIONADA: A03:2021 - Injection (Stored XSS)]
-    // Almacena cadenas HTML y scripts arbitrarios en la base de datos sin sanitizar
-    @Lob
-    @Column(name = "concepto_html")
+    // [REMEDIACION 3.3 - Stored XSS] El servicio codifica las entidades HTML antes de persistir.
+    // Columna VARCHAR acotada (en lugar de CLOB ilimitado) para permitir busqueda JPQL con LOWER().
+    @Column(name = "concepto_html", length = 4000)
     private String conceptoHtml;
 
     @Column(name = "fecha")

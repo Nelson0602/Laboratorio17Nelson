@@ -2,10 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { BancoService } from '../../services/banco.service';
 import { AuthService } from '../../services/auth.service';
 import { Transaccion } from '../../models/banco.model';
+import { mensajeDeError } from '../../services/errores';
 
 @Component({
   selector: 'app-transacciones',
@@ -15,17 +15,16 @@ import { Transaccion } from '../../models/banco.model';
 })
 export class TransaccionesComponent implements OnInit {
   transacciones: Transaccion[] = [];
-  transaccionSeleccionada: Transaccion | null = null;
-  conceptoSeguro: SafeHtml = '';
+  txSeleccionada: Transaccion | null = null;
   terminoBusqueda = '';
   loading = false;
   errorInfo = '';
 
+  // [REMEDIACION 3.3] Se elimino DomSanitizer.bypassSecurityTrustHtml: el concepto ya no se
+  // inyecta como HTML. La plantilla usa interpolacion {{ }}, que Angular codifica siempre.
   constructor(
     private bancoService: BancoService,
-    public authService: AuthService,
-    // [VULNERABILIDAD INTENCIONADA: A03:2021 - Bypass de Sanitizacion XSS]
-    private sanitizer: DomSanitizer
+    public authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -42,52 +41,53 @@ export class TransaccionesComponent implements OnInit {
       },
       error: (err) => {
         this.loading = false;
-        this.errorInfo = 'Error al cargar historial: ' + (err.error?.message || err.message);
+        this.errorInfo = mensajeDeError(err, 'No fue posible cargar el historial.');
       }
     });
   }
 
-  // [VULNERABILIDAD INTENCIONADA: SQL Injection Trigger]
+  // [REMEDIACION 3.1] El backend usa JPQL parametrizado; el termino se envia codificado en la URL.
   ejecutarBusqueda(): void {
-    if (!this.terminoBusqueda.trim()) {
+    const termino = this.terminoBusqueda.trim();
+    if (!termino) {
       this.cargarTransacciones();
       return;
     }
-
     this.loading = true;
     this.errorInfo = '';
-    this.bancoService.buscarTransacciones(this.terminoBusqueda).subscribe({
+    this.bancoService.buscarTransacciones(termino).subscribe({
       next: (data) => {
         this.transacciones = data;
         this.loading = false;
       },
       error: (err) => {
         this.loading = false;
-        // [VULNERABILIDAD INTENCIONADA: A05:2021 - Fuga de Error SQL]
-        this.errorInfo = 'Fallo de Base de Datos (Stack Trace): ' + (err.error?.message || err.error?.trace || err.message);
+        // [REMEDIACION 4.2] Solo se muestra el mensaje generico del ProblemDetail, nunca trazas.
+        this.errorInfo = mensajeDeError(err, 'No fue posible realizar la busqueda.');
       }
     });
   }
 
-  inyectarPayloadSql(): void {
-    this.terminoBusqueda = "' OR '1'='1";
-    this.ejecutarBusqueda();
-  }
-
   verComprobante(t: Transaccion): void {
-    this.transaccionSeleccionada = t;
-    // [VULNERABILIDAD INTENCIONADA: Stored XSS Sink]
-    // Anula voluntariamente la sanitizacion nativa de Angular
-    if (t.conceptoHtml) {
-      this.conceptoSeguro = this.sanitizer.bypassSecurityTrustHtml(t.conceptoHtml);
-    } else {
-      this.conceptoSeguro = '';
-    }
+    this.txSeleccionada = t;
   }
 
   cerrarComprobante(): void {
-    this.transaccionSeleccionada = null;
-    this.conceptoSeguro = '';
+    this.txSeleccionada = null;
+  }
+
+  /**
+   * El backend persiste el concepto con entidades HTML codificadas (defensa en profundidad).
+   * Para mostrarlo legible se decodifican esas 5 entidades a texto; el resultado se pinta con
+   * interpolacion {{ }}, por lo que Angular lo vuelve a tratar como texto y nunca como HTML.
+   */
+  textoPlano(valor: string | null | undefined): string {
+    if (!valor) return '';
+    return valor
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'")
+      .replace(/&amp;/g, '&');
   }
 }
-

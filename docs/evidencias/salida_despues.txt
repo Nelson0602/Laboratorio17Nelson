@@ -1,0 +1,71 @@
+
+==================================================================
+HALLAZGO-04 | Login con BCrypt (credenciales validas -> 200, respuesta sin contrasena)
+==================================================================
+{"token":"<JWT omitido>","username":"carlos_mora","nombreCompleto":"Carlos Mora Morales","rol":"CLIENTE","usuarioId":3}
+HTTP 200
+
+==================================================================
+HALLAZGO-04 | Login con contrasena incorrecta -> 401 mensaje generico
+==================================================================
+{"type":"https://insecurepay.ucr.ac.cr/problemas/no-autenticado","title":"Autenticacion requerida","status":401,"detail":"Usuario o contrasena incorrectos.","instance":"/api/auth/login","timestamp":"2026-11-18T21:47:11.559804400Z"}
+HTTP 401
+
+==================================================================
+HALLAZGO-01 | Busqueda con payload ' OR 1=1 -- (debe retornar [] )
+==================================================================
+[]
+HTTP 200
+
+==================================================================
+HALLAZGO-01 | Busqueda legitima 'reembolso' (solo transacciones propias)
+==================================================================
+[{"id":3,"cuentaOrigenId":3,"numeroCuentaOrigen":"CR05015202001026458902","titularOrigen":"María Rojas Soto","cuentaDestinoId":2,"numeroCuentaDestino":"CR05015202001026458901","titularDestino":"Carlos Mora Morales","monto":15000.00,"conceptoHtml":"Reembolso almuerzo equipo de trabajo.","fecha":"2026-03-12T11:20:00","estado":"COMPLETADA"}]
+HTTP 200
+
+==================================================================
+HALLAZGO-02 | carlos consulta saldo de cuenta 3 (maria) -> 403
+==================================================================
+{"type":"https://insecurepay.ucr.ac.cr/problemas/acceso-denegado","title":"Acceso denegado","status":403,"detail":"Acceso no autorizado a cuenta ajena.","instance":"/api/cuentas/3/saldo","timestamp":"2026-11-18T21:47:12.074563600Z"}
+HTTP 403
+
+==================================================================
+HALLAZGO-02 | carlos consulta su propia cuenta 2 -> 200
+==================================================================
+{"cuentaId":2,"numeroCuenta":"CR05015202001026458901","saldo":249000.00,"moneda":"CRC"}
+HTTP 200
+
+==================================================================
+HALLAZGO-02 | Consulta sin token -> 401
+==================================================================
+{"type":"https://insecurepay.ucr.ac.cr/problemas/no-autenticado","title":"Autenticacion requerida","status":401,"detail":"Debe enviar la cabecera Authorization: Bearer <token>.","instance":"/api/cuentas/2","timestamp":"2026-11-18T21:47:12.393475800Z"}
+HTTP 401
+
+==================================================================
+HALLAZGO-02 | carlos intenta debitar la cuenta 3 (maria) -> 403
+==================================================================
+{"type":"https://insecurepay.ucr.ac.cr/problemas/acceso-denegado","title":"Acceso denegado","status":403,"detail":"Fraude detectado: no puede debitar fondos de cuentas ajenas.","instance":"/api/transacciones/transferir","timestamp":"2026-11-18T21:47:12.550521400Z"}
+HTTP 403
+
+==================================================================
+HALLAZGO-03 | Concepto con etiquetas HTML se persiste codificado
+==================================================================
+{"id":6,"cuentaOrigenId":2,"numeroCuentaOrigen":"CR05015202001026458901","titularOrigen":"Carlos Mora Morales","cuentaDestinoId":3,"numeroCuentaDestino":"CR05015202001026458902","titularDestino":"María Rojas Soto","monto":1000,"conceptoHtml":"Pago de Servicios &lt;img src=x onerror=alert(1)&gt;","fecha":"2026-11-18T15:47:12.7218439","estado":"COMPLETADA"}
+HTTP 201
+
+==================================================================
+HALLAZGO-05 | Error de tipo de parametro -> ProblemDetail 400 sin stack trace
+==================================================================
+{"type":"https://insecurepay.ucr.ac.cr/problemas/solicitud-invalida","title":"Solicitud invalida","status":400,"detail":"Los parametros enviados no tienen un formato valido.","instance":"/api/cuentas/abc","timestamp":"2026-11-18T21:47:12.889764200Z"}
+HTTP 400
+
+==================================================================
+HALLAZGO-05 | Recurso inexistente -> ProblemDetail 404
+==================================================================
+{"type":"https://insecurepay.ucr.ac.cr/problemas/recurso-no-encontrado","title":"Recurso no encontrado","status":404,"detail":"Cuenta bancaria no existe.","instance":"/api/cuentas/9999","timestamp":"2026-11-18T21:47:13.046979300Z"}
+HTTP 404
+
+==================================================================
+HALLAZGO-05 | Consola H2 deshabilitada -> 404
+==================================================================
+HTTP 404

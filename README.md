@@ -6,6 +6,36 @@
 
 ---
 
+## ✅ Entrega Laboratorio 17 — Versión remediada
+
+Este repositorio contiene la **versión remediada** de InsecurePay. El informe completo está en **[BITACORA_PERICIAL.md](BITACORA_PERICIAL.md)**.
+
+| Hallazgo | Vulnerabilidad | Remediación |
+|---|---|---|
+| HALLAZGO-01 | SQL Injection (A03, CWE-89) | JPQL parametrizado (`TransaccionRepository.buscarPorTerminoSeguro`) |
+| HALLAZGO-02 | IDOR/BOLA en cuentas y transferencias (A01, CWE-639) | Propiedad validada con la identidad del JWT → HTTP 403 |
+| HALLAZGO-03 | Stored XSS (A03, CWE-79) | Sin `bypassSecurityTrustHtml`; interpolación `{{ }}` + codificación HTML en el backend |
+| HALLAZGO-04 | Contraseñas en texto plano (A02/A07, CWE-256) | `BCryptPasswordEncoder(12)` + `passwordEncoder.matches()` |
+| HALLAZGO-05 | Fuga de trazas / H2 / secreto JWT (A05, CWE-209/798) | `include-stacktrace=never`, `@RestControllerAdvice` RFC 7807, `JWT_SECRET` por variable de entorno |
+
+**Verificación rápida:**
+```bash
+cd backend && mvn clean test                       # 12 pruebas, incluye SeguridadRemediacionTests
+# Con el backend en ejecución:
+bash docs/evidencias/verificar_remediacion.sh      # pruebas DAST del "después"
+```
+
+**Variables de entorno (opcionales):**
+
+| Variable | Uso | Por defecto |
+|---|---|---|
+| `JWT_SECRET` | Clave HMAC-SHA256, mínimo 32 bytes (Base64 recomendado: `openssl rand -base64 48`) | Clave aleatoria efímera generada al arrancar |
+| `JWT_EXPIRATION_MS` | Vigencia del token | `3600000` (1 h) |
+| `H2_CONSOLE_ENABLED` | Habilita la consola H2 solo en local | `false` |
+| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos | `http://localhost:4200` |
+
+---
+
 ## 1. Descripción del Proyecto
 
 **InsecurePay** es una plataforma fintech / billetera digital simplificada desarrollada con arquitectura desacoplada:
@@ -107,15 +137,19 @@ La base de datos en memoria se inicializa con los siguientes usuarios de prueba:
 
 | Usuario | Contraseña | Rol | Cuentas Asignadas |
 | :--- | :--- | :--- | :--- |
-| `admin` | `admin123` | Administrador del Sistema | Ninguna (gestión global) |
-| `auditor_seguridad` | `audit2026` | Auditor Forense | Acceso de auditoría |
-| `carlos_mora` | `carlos2026` | Cliente Bancario | `CTA-CR-1001` (Ahorros CRC), `CTA-CR-1002` (Dólares USD) |
-| `maria_rojas` | `maria2026` | Cliente Bancario | `CTA-CR-2001` (Ahorros CRC) |
-| `juan_perez` | `juan2026` | Cliente Bancario | `CTA-CR-3001` (Ahorros CRC) |
+| `admin` | `admin123` | Administrador del Sistema | Cuenta ID 1 `CR05015202001026458900` |
+| `auditor_seguridad` | `auditor2026` | Auditor Forense | Lectura de auditoría |
+| `carlos_mora` | `carlos123` | Cliente Bancario | Cuenta ID 2 `CR05015202001026458901` (Ahorros CRC) |
+| `maria_rojas` | `maria123` | Cliente Bancario | Cuenta ID 3 `CR05015202001026458902` (Corriente CRC) |
+| `juan_perez` | `juan123` | Cliente Bancario | Cuenta ID 4 `CR05015202001026458903` (Ahorros CRC) |
+
+> En la versión remediada las contraseñas se guardan en `data.sql` como hash **BCrypt** (factor 12); las de la tabla siguen siendo las que se escriben en el login.
 
 ---
 
 ## 5. Acceso a la Consola de Base de Datos H2
+
+> **Versión remediada:** la consola está **deshabilitada por defecto**. Para depurar en local, arranque el backend con la variable `H2_CONSOLE_ENABLED=true` (solo acepta conexiones desde localhost).
 
 Para inspeccionar las tablas (`USUARIOS`, `CUENTAS_BANCARIAS`, `TRANSACCIONES`):
 

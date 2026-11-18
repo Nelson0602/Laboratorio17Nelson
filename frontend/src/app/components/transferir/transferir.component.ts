@@ -5,6 +5,7 @@ import { Router, RouterModule } from '@angular/router';
 import { BancoService } from '../../services/banco.service';
 import { AuthService } from '../../services/auth.service';
 import { Cuenta, TransferenciaRequest } from '../../models/banco.model';
+import { mensajeDeError } from '../../services/errores';
 
 @Component({
   selector: 'app-transferir',
@@ -13,12 +14,14 @@ import { Cuenta, TransferenciaRequest } from '../../models/banco.model';
   templateUrl: './transferir.component.html'
 })
 export class TransferirComponent implements OnInit {
-  todasLasCuentas: Cuenta[] = [];
+  // [REMEDIACION 3.2] Solo se ofrecen como origen las cuentas del usuario autenticado.
+  // (El control real esta en el backend, que rechaza con 403 cualquier cuenta ajena.)
+  misCuentas: Cuenta[] = [];
   transferencia: TransferenciaRequest = {
-    cuentaOrigenId: 2, // Por defecto cuenta de Maria Rojas (IDOR audit vector!)
-    numeroCuentaDestino: 'CR05015202001026458901', // Cuenta de Carlos Mora
-    monto: 50000,
-    conceptoHtml: '<p>Transferencia por servicios prestados.</p>'
+    cuentaOrigenId: 0,
+    numeroCuentaDestino: '',
+    monto: 0,
+    conceptoHtml: ''
   };
 
   loading = false;
@@ -32,10 +35,16 @@ export class TransferirComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.bancoService.listarTodasLasCuentas().subscribe({
+    const user = this.authService.currentUser();
+    if (!user) return;
+    this.bancoService.obtenerCuentasUsuario(user.usuarioId).subscribe({
       next: (cuentas) => {
-        this.todasLasCuentas = cuentas;
-      }
+        this.misCuentas = cuentas;
+        if (cuentas.length > 0) {
+          this.transferencia.cuentaOrigenId = cuentas[0].id;
+        }
+      },
+      error: (err) => this.errorMsg = mensajeDeError(err, 'No fue posible cargar sus cuentas.')
     });
   }
 
@@ -52,26 +61,13 @@ export class TransferirComponent implements OnInit {
     this.bancoService.transferir(this.transferencia).subscribe({
       next: (res) => {
         this.loading = false;
-        this.successMsg = `¡Transferencia exitosa! Débito de ₡${res.monto} ejecutado en la cuenta origen #${res.cuentaOrigenId}.`;
-        setTimeout(() => {
-          this.router.navigate(['/transacciones']);
-        }, 1500);
+        this.successMsg = `¡Transferencia exitosa! Débito de ₡${res.monto} aplicado a su cuenta ${res.numeroCuentaOrigen}.`;
+        setTimeout(() => this.router.navigate(['/transacciones']), 1500);
       },
       error: (err) => {
         this.loading = false;
-        this.errorMsg = 'Error en la transacción: ' + (err.error?.message || err.message);
+        this.errorMsg = mensajeDeError(err, 'No fue posible procesar la transferencia.');
       }
     });
   }
-
-  inyectarPayload(tipo: string): void {
-    if (tipo === 'alert') {
-      this.transferencia.conceptoHtml = `<img src="invalido" onerror="alert('Alerta Forense: Ejecución XSS en Comprobante InsecurePay!')">`;
-    } else if (tipo === 'html') {
-      this.transferencia.conceptoHtml = `<div style="background: #fee2e2; border: 2px solid red; padding: 10px; border-radius: 6px;">` +
-        `<h4 style="color: #991b1b; margin:0;">ALERTA DE SEGURIDAD</h4>` +
-        `<p style="margin: 4px 0 0; color: #7f1d1d;">Transferencia con concepto no verificado sanitariamente.</p></div>`;
-    }
-  }
 }
-
